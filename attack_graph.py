@@ -9,7 +9,7 @@ class AttackGraphModeler:
         self.connections = self._parse_connections(connections_file)
         
     def _parse_topology(self, file_path):
-        """Чтение файла топологии"""
+
         topology = {}
         with open(file_path, 'r') as f:
             for line in f:
@@ -18,7 +18,7 @@ class AttackGraphModeler:
         return topology
 
     def _parse_connections(self, file_path):
-        """Чтение файла связей"""
+
         connections = {}
         current_router = None
         with open(file_path, 'r') as f:
@@ -34,18 +34,18 @@ class AttackGraphModeler:
         return connections
 
     def build_graph(self):
-        """Построение графа атак"""
-        # добавление узлов с уязвимостями
+
+        # Добавление узлов с уязвимостями
         for ip, vulns in self.topology.items():
             self.graph.add_node(ip, vulnerabilities=vulns)
         
-        # добавление связей
+        # Добавление связей
         for router, data in self.connections.items():
-            # связи с другими маршрутизаторами
+            # Связи с другими маршрутизаторами
             for connected_router in data['routers']:
                 self.graph.add_edge(router, connected_router)
             
-            # связи с узлами
+            # Связи с узлами
             for node in data['nodes']:
                 access, node_ip = node[0], node[1:].strip()
                 if access == '+':
@@ -54,17 +54,71 @@ class AttackGraphModeler:
         return self.graph
 
     def visualize(self):
-        """Визуализация графа"""
-        pos = nx.spring_layout(self.graph)
-        nx.draw(
-            self.graph, pos, 
-            with_labels=True, 
-            node_color='lightblue', 
-            edge_color='gray',
+
+        # Кастомное расположение
+        pos = {}
+        nodes = list(self.graph.nodes())
+        
+        # Фильтр узлов, чтобы центральный был только один
+        center_node = "192.168.134.3"
+        circle_nodes = [n for n in nodes if n != center_node]
+        
+        # Узлы по кругу
+        n = len(circle_nodes)
+        radius = 8  # Увеличиваем радиус для лучшего отображения
+        angle = np.linspace(0, 2*np.pi, n, endpoint=False)
+        
+        for i, node in enumerate(circle_nodes):
+            x = radius * np.cos(angle[i])
+            y = radius * np.sin(angle[i])
+            pos[node] = (x, y)
+        
+        # Центральный узел
+        pos[center_node] = (0, 0)
+        
+        # Фигура большего размера
+        plt.figure(figsize=(10, 10))
+        
+        # Рисуем узлы
+        nx.draw_networkx_nodes(
+            self.graph, pos,
+            nodelist=circle_nodes,
+            node_color='lightblue',
             node_size=2000,
-            font_size=8
+            edgecolors='black'
         )
-        plt.title("Attack Graph")
+        
+        # Центральный узел в виде треугольника
+        nx.draw_networkx_nodes(
+            self.graph, pos,
+            nodelist=[center_node],
+            node_color='red',
+            node_shape='^',
+            node_size=3000,
+            edgecolors='black'
+        )
+        
+        # Связи и подписи
+        nx.draw_networkx_edges(
+            self.graph, pos,
+            edge_color='gray',
+            arrows=True,
+            arrowstyle='-|>',
+            arrowsize=20
+        )
+        
+        nx.draw_networkx_labels(
+            self.graph, pos,
+            font_size=12,
+            font_weight='bold'
+        )
+        
+        plt.axis('off')
+        
+        # Фиксируем масштаб осей
+        plt.xlim(-radius*1.2, radius*1.2)
+        plt.ylim(-radius*1.2, radius*1.2)
+        
         plt.show()
 
 if __name__ == "__main__":
