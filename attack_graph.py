@@ -94,7 +94,7 @@ class AttackGraphModeler:
             nodelist=[center_node],
             node_color='red',
             node_shape='^',
-            node_size=3000,
+            node_size=5000,
             edgecolors='black'
         )
         
